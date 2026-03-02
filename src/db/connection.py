@@ -1,39 +1,13 @@
 
-# import os
-# import psycopg
-# from contextlib import contextmanager
-
-# # Read connection string from environment variable
-# DATABASE_URL = os.getenv(
-#     "DATABASE_URL",
-#     "host=localhost port=5432 dbname=northwind user=postgres password=password"
-# )
-
-
-# @contextmanager
-# def get_db():
-#     """Reusable synchronous DB connection generator."""
-#     conn = None
-#     try:
-#         conn = psycopg.connect(DATABASE_URL)
-#         yield conn
-#     finally:
-#         if conn:
-#             conn.close()
-
-
-
-
-
-# db.py
 import os
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession, create_async_engine)
 from sqlalchemy.orm import sessionmaker
+from typing import AsyncGenerator
 
 load_dotenv()
-
 DATABASE_URL = os.getenv("DATABASE_URL")
+
 # -----------------------------------------------------------
 # Create async SQLAlchemy engine (with asyncpg + pooling)
 # -----------------------------------------------------------
@@ -58,7 +32,7 @@ AsyncSessionLocal = sessionmaker(
 # -----------------------------------------------------------
 # Dependency / helper to get an async session
 # -----------------------------------------------------------
-async def get_session() -> AsyncSession:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Use this with 'async with' in any function that needs DB access.
     """
