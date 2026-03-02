@@ -1,6 +1,3 @@
-#from unittest import result
-
-
 import asyncio
 from sqlalchemy import text
 from db.connection import get_session
