@@ -5,7 +5,7 @@ from sqlalchemy import text, bindparam
 import pandas as pd
 
 
-class Query:
+class QueryRunner:
 
     """
     High-level SQL helper for AsyncSession.
@@ -228,9 +228,8 @@ class Query:
 # ---------------------------------------------------------
 class _AutoCleanupTransaction:
     """
-    Version C:
-      • If the session already has an active transaction (SELECT or DML),
-        automatically roll it back BEFORE starting a new explicit tx.
+    If the session already has an active transaction (SELECT or DML),
+    automatically roll it back BEFORE starting a new explicit tx.
     """
 
     def __init__(self, session: AsyncSession):

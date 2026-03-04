@@ -1,12 +1,12 @@
 import asyncio
 import datetime
 from db.connection import get_session, close_engine
-from db.db_utils import Query
+from db.db_utils import QueryRunner
 
 
 async def main():
     async for session in get_session():
-        q = Query(session)
+        q = QueryRunner(session)
         # Get a single scalar
         now = await q.fetch_value("SELECT NOW()")
         print("Now:", now)
@@ -27,7 +27,7 @@ async def main():
         # Get rows
         UK_employees = await q.fetch_all(
             "SELECT * FROM employees WHERE country IN :countries",
-            {"countries": ["UK"]},
+            {"countries": ["UK", "USA"]},
             as_mapping=True
         )
         print("UK employees:", UK_employees)
@@ -90,13 +90,17 @@ async def main():
         print(await q.count(
             "SELECT COUNT(*) FROM employees"
         ))
-        
+
         products_limit_5 = await q.fetch_all(
             "SELECT * FROM products LIMIT 5",
             {},
             as_mapping=True
         )
         print("Products (limited to 5):", products_limit_5)
+
+        df = await q.dataframe("SELECT * FROM employees")
+        print("Employees as DataFrame:")
+        print(df.head())
     await close_engine()
 
 
