@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional, List, Tuple, Union
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.engine import Result
 from sqlalchemy import text, bindparam
+import pandas as pd
 
 
 class Query:
@@ -197,6 +198,17 @@ class Query:
         result = await self.session.execute(stmt, params or {})
 
         return result.scalar() if returning else (result.rowcount or 0)
+
+    # -----------------------------------------------------
+    # Dataframe helper (optional, requires pandas)
+    # -----------------------------------------------------
+    async def dataframe(self, sql: str, params=None):
+        """
+        Execute a query and return results as a pandas DataFrame.
+        Requires pandas to be installed.
+        """
+        rows = await self.fetch_all(sql, params)
+        return pd.DataFrame(rows)
 
     # -----------------------------------------------------
     # Transaction context manager

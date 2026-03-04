@@ -82,21 +82,21 @@ async def main():
 
             await q.delete(
                 "employees",
-                where="employeeid = :id",
-                params={"id": 15},
-                returning="firstname"
+                where="lastname = :lname",
+                params={"lname": "MyLastname"},
+                returning="*"
             )
 
         print(await q.count(
             "SELECT COUNT(*) FROM employees"
         ))
-        # Get rows
-        new_employees = await q.fetch_all(
-            "SELECT * FROM employees WHERE employeeid = 10",
+        
+        products_limit_5 = await q.fetch_all(
+            "SELECT * FROM products LIMIT 5",
+            {},
             as_mapping=True
         )
-        print("All employees:", new_employees)
-
+        print("Products (limited to 5):", products_limit_5)
     await close_engine()
 
 
