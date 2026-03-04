@@ -1,5 +1,7 @@
 import asyncio
 import datetime
+import pandas as pd
+#from turtle import pd
 from db.connection import get_session, close_engine
 from db.db_utils import QueryRunner
 
@@ -98,10 +100,29 @@ async def main():
         )
         print("Products (limited to 5):", products_limit_5)
 
-        df = await q.dataframe("SELECT * FROM employees")
-        print("Employees as DataFrame:")
-        print(df.head())
+        df_employees = await q.dataframe("SELECT * FROM employees")
+        df_orders = await q.dataframe("SELECT * FROM orders LIMIT 5000")
+        df_orderdetails = await q.dataframe("SELECT * FROM orderdetails LIMIT 5000")
+        df_products = await q.dataframe("SELECT * FROM products LIMIT 5000")
+        df_customers = await q.dataframe("SELECT * FROM customers LIMIT 5000")
+
     await close_engine()
+    print(df_employees.info())
+    print(df_orders.info())
+    print(df_orderdetails.info())
+    print(df_products.info())
+    print(df_customers.info())
+
+    df_orderdetails["quantity"] = pd.to_numeric(df_orderdetails["quantity"], errors="coerce").fillna(0).astype(int)
+    df_orderdetails["unitprice"] = pd.to_numeric(df_orderdetails["unitprice"], errors="coerce")  # float
+    df_orderdetails["discount"] = pd.to_numeric(df_orderdetails["discount"], errors="coerce")  # float
+    print(df_orderdetails.info())
+
+    df = df_orderdetails.merge(df_orders, on="orderid").merge(df_customers, on="customerid")
+    print(df.head(15))
+
+    revenue_per_order = df.groupby("orderid").apply(lambda g: ((g["unitprice"] * g["quantity"]) * (1 - g.get("discount", 0))).sum())
+    print(revenue_per_order.head)
 
 
 if __name__ == "__main__":

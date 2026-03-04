@@ -200,7 +200,86 @@ class QueryRunner:
         return result.scalar() if returning else (result.rowcount or 0)
 
     # -----------------------------------------------------
-    # Dataframe helper (optional, requires pandas)
+    # Bulk operations
+    # -----------------------------------------------------
+    async def bulk_insert(self, table: str, rows: list[dict]):
+        """
+        Very fast bulk insert using one INSERT ... VALUES ... statement.
+        rows = [ {"col":val,...}, {"col":val,...} ]
+        """
+        if not rows:
+            return 0
+
+        cols = rows[0].keys()
+        col_names = ", ".join(cols)
+        value_binds = ", ".join(f":{c}" for c in cols)
+
+        sql = f"INSERT INTO {table} ({col_names}) VALUES ({value_binds})"
+
+        # session.execute can accept a list of dicts → batched exec
+        result = await self.session.execute(sql, rows)
+        return result.rowcount or len(rows)
+
+    async def bulk_update(self, table: str, rows: list[dict], key: str):
+        """
+        Bulk update using multiple UPDATE statements batched internally.
+        rows MUST contain the key column (PK or unique).
+        Example row: {"employeeid": 5, "city": "Aarhus"}
+        """
+        if not rows:
+            return 0
+
+        count = 0
+        for r in rows:
+            where_val = r[key]
+            set_vals = {k: v for k, v in r.items() if k != key}
+
+            set_clause = ", ".join(f"{k} = :{k}" for k in set_vals.keys())
+            params = {**set_vals, key: where_val}
+
+            sql = f"UPDATE {table} SET {set_clause} WHERE {key} = :{key}"
+            result = await self.session.execute(sql, params)
+
+            count += result.rowcount or 0
+
+        return count
+
+    async def bulk_delete(
+        self,
+        table: str,
+        ids: list,
+        *,
+        key: str = "id",
+        returning: str | None = None,
+    ):
+        """
+        Fast bulk delete by primary/unique key list.
+        Generates a single:
+        DELETE FROM table WHERE key IN (:ids_0, :ids_1, ...)
+        If returning="*" returns list of dict rows,
+        if returning="<col>" returns list of scalars,
+        else returns deleted count.
+        """
+        if not ids:
+            return [] if returning else 0
+
+        # Build SQL with IN expansion (Query handles expansion)
+        sql = f"DELETE FROM {table} WHERE {key} IN :ids"
+
+        params = {"ids": ids}
+        if returning == "*":
+            # rows as dict-like mappings
+            return await self.fetch_all(sql + " RETURNING *", params, as_mapping=True)
+        elif returning:
+            # list of scalars from the returning column
+            # (e.g., returning="id" => [1,2,3])
+            rows = await self.fetch_all(sql + f" RETURNING {returning}", params, as_mapping=False)
+            return [r[0] for r in rows]
+        else:
+            return await self.execute(sql, params)
+
+    # -----------------------------------------------------
+    # Dataframe helper
     # -----------------------------------------------------
     async def dataframe(self, sql: str, params=None):
         """
