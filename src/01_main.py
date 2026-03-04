@@ -1,15 +1,12 @@
 import asyncio
 import datetime
-from sqlalchemy import text
 from db.connection import get_session, close_engine
-import db.db_utils as db_utils
-from sqlalchemy import select
-from sqlalchemy import text, bindparam
+from db.db_utils import Query
 
 
 async def main():
     async for session in get_session():
-        q = db_utils.Query(session)
+        q = Query(session)
         # Get a single scalar
         now = await q.fetch_value("SELECT NOW()")
         print("Now:", now)
@@ -36,20 +33,19 @@ async def main():
         print("UK employees:", UK_employees)
 
         print(await q.exists(
-        "SELECT 1 FROM employees WHERE employeeid = :id",
-        {"id": 10}
+            "SELECT 1 FROM employees WHERE employeeid = :id",
+            {"id": 10}
         ))
         print(await q.exists(
-        "SELECT 1 FROM employees WHERE employeeid = :id",
-        {"id": 15}
+            "SELECT 1 FROM employees WHERE employeeid = :id",
+            {"id": 15}
         ))
         print(await q.count(
-        "SELECT COUNT(*) FROM employees WHERE country = :c",
-        {"c": "Germany"}
+            "SELECT COUNT(*) FROM employees"
         ))
         print(await q.count(
-        "SELECT COUNT(*) FROM employees WHERE country = :c",
-        {"c": "UK"}
+            "SELECT COUNT(*) FROM employees WHERE country = :c",
+            {"c": "UK"}
         ))
 
         # Insert inside a transaction
@@ -71,53 +67,38 @@ async def main():
                 },
                 returning="*"
             )
+            print("Inserted employee:", new_emp)
+
+            print(await q.count(
+                "SELECT COUNT(*) FROM employees"
+            ))
+
+            await q.update(
+                "employees",
+                {"firstname": "NewName"},
+                where="employeeid = :id",
+                params={"id": 10}
+            )
+
+            await q.delete(
+                "employees",
+                where="employeeid = :id",
+                params={"id": 15},
+                returning="firstname"
+            )
 
         print("Inserted employee:", new_emp)
-
+        print(await q.count(
+            "SELECT COUNT(*) FROM employees"
+        ))
         # Get rows
         new_employees = await q.fetch_all(
-            "SELECT * FROM employees WHERE employeeid = 11",
+            "SELECT * FROM employees WHERE employeeid = 10",
             as_mapping=True
         )
         print("All employees:", new_employees)
 
     await close_engine()
-
-
-
-
-# print("Inserted employee ID:", id)
-
-# rows = await q.update(
-#     "employees",
-#     {"age": 34},
-#     where="id = :id",
-#     params={"id": 10}
-# )
-
-# print("Rows updated:", rows
-
-
-# country = await q.update(
-#     "employees",
-#     {"country": "Denmark"},
-#     where="id = :id",
-#     params={"id": 10},
-#     returning="country"
-# )
-
-# deleted = await q.delete(
-#     "employees",
-#     where="id = :id",
-#     params={"id": 10}
-# )
-
-# email = await q.delete(
-#     "employees",
-#     where="id = :id",
-#     params={"id": 11},
-#     returning="email"
-# )
 
 
 if __name__ == "__main__":
