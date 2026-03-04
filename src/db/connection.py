@@ -21,7 +21,7 @@ def _create_async_engine(database_url: str) -> AsyncEngine:
     print("[DB] Creating async engine (connection pool starts here)...")
     engine: AsyncEngine = create_async_engine(
         database_url,
-        echo=True,        # set to True for SQL logging
+        echo=False,        # set to True for SQL logging
         future=True,
         pool_size=10,      # max number of open connections
         max_overflow=20,   # extra temporary connections
@@ -29,11 +29,10 @@ def _create_async_engine(database_url: str) -> AsyncEngine:
     return engine
 
 
-engine: AsyncEngine = _create_async_engine(DATABASE_URL)
-
 # -----------------------------------------------------------
 # Create async session factory
 # -----------------------------------------------------------
+engine: AsyncEngine = _create_async_engine(DATABASE_URL)
 AsyncSessionLocal = sessionmaker(
     engine,
     expire_on_commit=False,
@@ -49,7 +48,6 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
     async with AsyncSessionLocal() as session:
         print("[DB] Session opened. Acquiring DB connection from pool...")
-
         try:
             yield session
         finally:
