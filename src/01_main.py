@@ -87,7 +87,6 @@ async def main():
                 returning="firstname"
             )
 
-        print("Inserted employee:", new_emp)
         print(await q.count(
             "SELECT COUNT(*) FROM employees"
         ))
