@@ -149,7 +149,7 @@ async def main():
 
     plt.show()
 
-    async for row in stream("SELECT * FROM orderdetails LIMIT 50"):
+    async for row in stream("SELECT * FROM orderdetails LIMIT 10"):
         print(row)
 
     async for batch in stream_batches("SELECT * FROM orderdetails", batch_size=1500):
