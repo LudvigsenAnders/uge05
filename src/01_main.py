@@ -153,7 +153,7 @@ async def main():
                 }
             ]
 
-            bulk_insert_result = await q.bulk_insert(
+            await q.bulk_insert(
                 "employees",
                 bulk_insert_list,
             )
@@ -238,7 +238,7 @@ async def main():
     async for batch in stream_batches("SELECT * FROM orderdetails", batch_size=1500):
         batch_df = pd.DataFrame(batch)
         print(batch_df.info())
-    
+
     await close_asyncpg_pool()
 
 if __name__ == "__main__":
