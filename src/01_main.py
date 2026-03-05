@@ -15,16 +15,16 @@ async def main():
 
         # Get one row
         one_row = await q.fetch_one(
-            "SELECT * FROM employees"
+            "SELECT * FROM orderdetails"
         )
-        print("One row:", one_row)
+        print("One row:", one_row, "\n")
 
         # Get rows
         employees = await q.fetch_all(
-            "SELECT * FROM employees",
-            as_mapping=True
+            "SELECT firstname FROM employees",
+            as_mapping=False
         )
-        print("All employees:", employees)
+        print("All employees:", "\n", employees, "\n")
 
         # Get rows with IN params
         customers = await q.fetch_all(
@@ -32,7 +32,7 @@ async def main():
             {"countries": ["UK", "USA"]},
             as_mapping=True
         )
-        print("UK and USA customers:", customers)
+        print("UK and USA customers:", "\n", customers, "\n")
 
         # Get exists True/False
         print("Exists: ",
@@ -47,8 +47,8 @@ async def main():
                   {"c": "UK"}
               ))
 
-        # Insert inside a transaction
         async with q.transaction():
+            # Insert inside a transaction
             new_emp = await q.insert(
                 "employees",
                 {
@@ -66,18 +66,31 @@ async def main():
                 },
                 returning="lastname"
             )
-            print("Inserted employee: ", new_emp)
+            print("Inserted employee: ", new_emp, "\n")
+
+            # Update inside a transaction
+            new_employee = await q.fetch_all(
+                "SELECT * FROM employees WHERE employeeid = (SELECT MAX(employeeid) FROM employees)",
+                as_mapping=True
+            )
+            print("New employee:", new_employee, "\n")
 
             await q.update(
                 "employees",
-                {"firstname": "NewName"},
-                where="employeeid = :id",
-                params={"id": 10}
+                {"firstname": "ANDERS"},
+                where="employeeid = (SELECT MAX(employeeid) FROM employees)"
             )
 
+            new_employee = await q.fetch_all(
+                "SELECT * FROM employees WHERE employeeid = (SELECT MAX(employeeid) FROM employees)",
+                as_mapping=True
+            )
+            print("New employee:", new_employee, "\n")
+
+            # Delete inside a transaction
             print("Count before delete: ", await q.count(
                 "SELECT COUNT(*) FROM employees"
-            ))
+            ), "\n")
 
             await q.delete(
                 "employees",
@@ -88,7 +101,7 @@ async def main():
 
             print("Count after delete: ", await q.count(
                 "SELECT COUNT(*) FROM employees"
-            ))
+            ), "\n")
 
         products_limit_5 = await q.fetch_all(
             "SELECT productname FROM products LIMIT 5",
@@ -146,6 +159,7 @@ async def main():
     plt.xlabel("Employee")
     plt.ylabel("Revenue")
     plt.tight_layout()
+    revenue_per_employee.plot(kind="pie", title="Revenue per employee", y="revenue")
 
     plt.show()
 
