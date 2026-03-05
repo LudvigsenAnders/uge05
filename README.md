@@ -84,8 +84,3 @@ data/                # sample Northwind SQL data
 ## Dependencies
 
 See `requirements.txt` for the full list. Key libraries include:
-
-- SQLAlchemy 2.x
-- asyncpg
-- pandas / matplotlib for analysis
-- python-dotenv for configuration
