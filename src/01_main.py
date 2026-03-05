@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
-from db.connection import get_session, close_engine
+from db.connection import get_session, close_engine, stream, stream_batches
 from db.db_utils import QueryRunner
 
 
@@ -26,29 +26,26 @@ async def main():
         )
         print("All employees:", employees)
 
-        # Get rows
-        UK_employees = await q.fetch_all(
-            "SELECT * FROM employees WHERE country IN :countries",
+        # Get rows with IN params
+        customers = await q.fetch_all(
+            "SELECT customerid, companyname FROM customers WHERE country IN :countries",
             {"countries": ["UK", "USA"]},
             as_mapping=True
         )
-        print("UK employees:", UK_employees)
+        print("UK and USA customers:", customers)
 
-        print(await q.exists(
-            "SELECT 1 FROM employees WHERE employeeid = :id",
-            {"id": 10}
-        ))
-        print(await q.exists(
-            "SELECT 1 FROM employees WHERE employeeid = :id",
-            {"id": 15}
-        ))
-        print(await q.count(
-            "SELECT COUNT(*) FROM employees"
-        ))
-        print(await q.count(
-            "SELECT COUNT(*) FROM employees WHERE country = :c",
-            {"c": "UK"}
-        ))
+        # Get exists True/False
+        print("Exists: ",
+              await q.exists(
+                  "SELECT 1 FROM employees WHERE employeeid = :id",
+                  {"id": 10}
+              ))
+        # Get count of rows
+        print("row count: ",
+              await q.count(
+                  "SELECT COUNT(*) FROM employees WHERE country = :c",
+                  {"c": "UK"}
+              ))
 
         # Insert inside a transaction
         async with q.transaction():
@@ -67,13 +64,9 @@ async def main():
                     'postalcode': 'RG1 9SP',
                     'country': 'DK'
                 },
-                returning="*"
+                returning="lastname"
             )
-            print("Inserted employee:", new_emp)
-
-            print(await q.count(
-                "SELECT COUNT(*) FROM employees"
-            ))
+            print("Inserted employee: ", new_emp)
 
             await q.update(
                 "employees",
@@ -82,6 +75,10 @@ async def main():
                 params={"id": 10}
             )
 
+            print("Count before delete: ", await q.count(
+                "SELECT COUNT(*) FROM employees"
+            ))
+
             await q.delete(
                 "employees",
                 where="lastname = :lname",
@@ -89,40 +86,32 @@ async def main():
                 returning="*"
             )
 
-        print(await q.count(
-            "SELECT COUNT(*) FROM employees"
-        ))
+            print("Count after delete: ", await q.count(
+                "SELECT COUNT(*) FROM employees"
+            ))
 
         products_limit_5 = await q.fetch_all(
-            "SELECT * FROM products LIMIT 5",
+            "SELECT productname FROM products LIMIT 5",
             {},
             as_mapping=True
         )
-        print("Products (limited to 5):", products_limit_5)
+        print("Products: ", products_limit_5)
 
         df_employees = await q.dataframe("SELECT * FROM employees")
         df_orders = await q.dataframe("SELECT * FROM orders")
         df_orderdetails = await q.dataframe("SELECT * FROM orderdetails")
-        df_products = await q.dataframe("SELECT * FROM products")
         df_customers = await q.dataframe("SELECT * FROM customers")
 
     await close_engine()
-    print(df_employees.info())
-    print(df_orders.info())
-    print(df_orderdetails.info())
-    print(df_products.info())
-    print(df_customers.info())
 
     # prepare orderdetails for calculations (convert to numeric, handle missing/invalid)
     df_orderdetails["quantity"] = pd.to_numeric(df_orderdetails["quantity"], errors="coerce").fillna(0).astype(int)
     df_orderdetails["unitprice"] = pd.to_numeric(df_orderdetails["unitprice"], errors="coerce")  # float
     df_orderdetails["discount"] = pd.to_numeric(df_orderdetails["discount"], errors="coerce")  # float
-
     df = df_orderdetails.merge(df_orders, on="orderid").merge(df_customers, on="customerid")
-    print(df.info())
-
     df["line_total"] = df["unitprice"] * df["quantity"] * (1 - df.get("discount", 0))
 
+    # Visualize revenue by country, order, customer, employee
     revenue_per_country = (
         df.groupby(["country"])
         .agg(revenue=("line_total", "sum"))
@@ -159,6 +148,14 @@ async def main():
     plt.tight_layout()
 
     plt.show()
+
+    async for row in stream("SELECT * FROM orderdetails"):
+        print(row)
+
+    async for batch in stream_batches("SELECT * FROM orderdetails", batch_size=100):
+        df = pd.DataFrame(batch)
+        print(df.info())
+
 
 if __name__ == "__main__":
     asyncio.run(main())
