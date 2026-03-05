@@ -1,3 +1,4 @@
+
 SELECT *
 FROM products
 ORDER BY unitprice DESC;
@@ -44,4 +45,3 @@ select *
 from employees
 where extract(year from birthdate) >= 1960 and
 region is null;
-

@@ -113,16 +113,16 @@ async def main():
     print(df_products.info())
     print(df_customers.info())
 
+    # prepare orderdetails for calculations (convert to numeric, handle missing/invalid)
     df_orderdetails["quantity"] = pd.to_numeric(df_orderdetails["quantity"], errors="coerce").fillna(0).astype(int)
     df_orderdetails["unitprice"] = pd.to_numeric(df_orderdetails["unitprice"], errors="coerce")  # float
     df_orderdetails["discount"] = pd.to_numeric(df_orderdetails["discount"], errors="coerce")  # float
-    print(df_orderdetails.info())
 
     df = df_orderdetails.merge(df_orders, on="orderid").merge(df_customers, on="customerid")
-    print(df.head(15))
+    print(df.info())
 
     df["line_total"] = df["unitprice"] * df["quantity"] * (1 - df.get("discount", 0))
-    print(df)
+
     revenue_per_country = (
         df.groupby(["country"])
         .agg(revenue=("line_total", "sum"))
@@ -134,6 +134,8 @@ async def main():
     plt.tight_layout()
     revenue_per_orders = df.groupby(["orderid"]).agg(revenue=("line_total", "sum"))
     revenue_per_orders.plot(kind="hist", bins=50, title="Revenue per order")
+    plt.xlabel("Order revenue")
+    plt.ylabel("Number of orders")
     plt.tight_layout()
     revenue_per_customer = (
         df.groupby(["customerid", "companyname"])
@@ -142,6 +144,8 @@ async def main():
         .head(20)
     )
     revenue_per_customer.plot(kind="bar", title="Revenue per customer")
+    plt.xlabel("Customer")
+    plt.ylabel("Revenue")
     plt.tight_layout()
     revenue_per_employee = (
         df.merge(df_employees, on="employeeid")
@@ -150,6 +154,8 @@ async def main():
         .sort_values("revenue", ascending=False)
     )
     revenue_per_employee.plot(kind="bar", title="Revenue per employee")
+    plt.xlabel("Employee")
+    plt.ylabel("Revenue")
     plt.tight_layout()
 
     plt.show()
