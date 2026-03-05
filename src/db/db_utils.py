@@ -14,6 +14,8 @@ class QueryRunner:
       - scalar_one(), scalar_required()
       - exists(), count()
       - insert(), update(), delete()
+      - bulk_insert(), bulk_update(), bulk_delete()
+      - dataframe() → pandas DataFrame
       - transaction()
       - auto-expanding IN params
     """
@@ -253,7 +255,7 @@ class QueryRunner:
         returning: str | None = None,
     ):
         """
-        Fast bulk delete by primary/unique key list.
+        Bulk delete by primary/unique key list.
         Generates a single:
         DELETE FROM table WHERE key IN (:ids_0, :ids_1, ...)
         If returning="*" returns list of dict rows,

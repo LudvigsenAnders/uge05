@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 import pandas as pd
-#from turtle import pd
+import matplotlib.pyplot as plt
 from db.connection import get_session, close_engine
 from db.db_utils import QueryRunner
 
@@ -101,10 +101,10 @@ async def main():
         print("Products (limited to 5):", products_limit_5)
 
         df_employees = await q.dataframe("SELECT * FROM employees")
-        df_orders = await q.dataframe("SELECT * FROM orders LIMIT 5000")
-        df_orderdetails = await q.dataframe("SELECT * FROM orderdetails LIMIT 5000")
-        df_products = await q.dataframe("SELECT * FROM products LIMIT 5000")
-        df_customers = await q.dataframe("SELECT * FROM customers LIMIT 5000")
+        df_orders = await q.dataframe("SELECT * FROM orders")
+        df_orderdetails = await q.dataframe("SELECT * FROM orderdetails")
+        df_products = await q.dataframe("SELECT * FROM products")
+        df_customers = await q.dataframe("SELECT * FROM customers")
 
     await close_engine()
     print(df_employees.info())
@@ -121,9 +121,38 @@ async def main():
     df = df_orderdetails.merge(df_orders, on="orderid").merge(df_customers, on="customerid")
     print(df.head(15))
 
-    revenue_per_order = df.groupby("orderid").apply(lambda g: ((g["unitprice"] * g["quantity"]) * (1 - g.get("discount", 0))).sum())
-    print(revenue_per_order.head)
+    df["line_total"] = df["unitprice"] * df["quantity"] * (1 - df.get("discount", 0))
+    print(df)
+    revenue_per_country = (
+        df.groupby(["country"])
+        .agg(revenue=("line_total", "sum"))
+        .sort_values("revenue", ascending=False)
+    )
+    revenue_per_country.plot(kind="bar", title="Revenue per country")
+    plt.xlabel("Country")
+    plt.ylabel("Revenue")
+    plt.tight_layout()
+    revenue_per_orders = df.groupby(["orderid"]).agg(revenue=("line_total", "sum"))
+    revenue_per_orders.plot(kind="hist", bins=50, title="Revenue per order")
+    plt.tight_layout()
+    revenue_per_customer = (
+        df.groupby(["customerid", "companyname"])
+        .agg(revenue=("line_total", "sum"))
+        .sort_values("revenue", ascending=False)
+        .head(20)
+    )
+    revenue_per_customer.plot(kind="bar", title="Revenue per customer")
+    plt.tight_layout()
+    revenue_per_employee = (
+        df.merge(df_employees, on="employeeid")
+        .groupby(["employeeid", "lastname", "firstname"])
+        .agg(revenue=("line_total", "sum"))
+        .sort_values("revenue", ascending=False)
+    )
+    revenue_per_employee.plot(kind="bar", title="Revenue per employee")
+    plt.tight_layout()
 
+    plt.show()
 
 if __name__ == "__main__":
     asyncio.run(main())
