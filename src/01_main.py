@@ -2,53 +2,61 @@ import asyncio
 import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
-from db.connection import get_session, close_engine, stream, stream_batches
+from db.connection import close_asyncpg_pool, get_session, close_engine, stream, stream_batches
 from db.db_utils import QueryRunner
 
 
 async def main():
     async for session in get_session():
         q = QueryRunner(session)
-        # Get a single scalar
-        now = await q.fetch_value("SELECT NOW()")
-        print("Now:", now)
-
-        # Get one row
-        one_row = await q.fetch_one(
-            "SELECT * FROM orderdetails"
-        )
-        print("One row:", one_row, "\n")
-
-        # Get rows
-        employees = await q.fetch_all(
-            "SELECT firstname FROM employees",
-            as_mapping=False
-        )
-        print("All employees:", "\n", employees, "\n")
-
-        # Get rows with IN params
-        customers = await q.fetch_all(
-            "SELECT customerid, companyname FROM customers WHERE country IN :countries",
-            {"countries": ["UK", "USA"]},
-            as_mapping=True
-        )
-        print("UK and USA customers:", "\n", customers, "\n")
-
-        # Get exists True/False
-        print("Exists: ",
-              await q.exists(
-                  "SELECT 1 FROM employees WHERE employeeid = :id",
-                  {"id": 10}
-              ))
-        # Get count of rows
-        print("row count: ",
-              await q.count(
-                  "SELECT COUNT(*) FROM employees WHERE country = :c",
-                  {"c": "UK"}
-              ))
-
         async with q.transaction():
-            # Insert inside a transaction
+            # Get a single scalar
+            now = await q.fetch_value("SELECT NOW()")
+            print("Now:", now)
+
+            # Get one row
+            one_row = await q.fetch_one(
+                "SELECT * FROM orderdetails"
+            )
+            print("One row:", one_row, "\n")
+
+            # Get rows
+            employees = await q.fetch_all(
+                "SELECT firstname FROM employees",
+                as_mapping=False
+            )
+            print("All employees:", "\n", employees, "\n")
+
+            # Get rows with IN params
+            customers = await q.fetch_all(
+                "SELECT customerid, companyname FROM customers WHERE country IN :countries",
+                {"countries": ["UK", "USA"]},
+                as_mapping=True
+            )
+            print("UK and USA customers:", "\n", customers, "\n")
+
+            # Product query example
+            products_limit_5 = await q.fetch_all(
+                "SELECT productname FROM products LIMIT 5",
+                {},
+                as_mapping=True
+            )
+            print("Products: ", products_limit_5)
+
+            # Get exists True/False
+            print("Exists: ",
+                  await q.exists(
+                      "SELECT 1 FROM employees WHERE employeeid = :id",
+                      {"id": 10}
+                  ))
+            # Get count of rows
+            print("row count: ",
+                  await q.count(
+                      "SELECT COUNT(*) FROM employees WHERE country = :c",
+                      {"c": "UK"}
+                  ))
+
+            # insert
             new_emp = await q.insert(
                 "employees",
                 {
@@ -64,17 +72,17 @@ async def main():
                     'postalcode': 'RG1 9SP',
                     'country': 'DK'
                 },
-                returning="lastname"
+                returning="employeeid"
             )
-            print("Inserted employee: ", new_emp, "\n")
+            print("Inserted new employee: ", new_emp, "\n")
 
-            # Update inside a transaction
             new_employee = await q.fetch_all(
                 "SELECT * FROM employees WHERE employeeid = (SELECT MAX(employeeid) FROM employees)",
                 as_mapping=True
             )
             print("New employee:", new_employee, "\n")
 
+            # Update
             await q.update(
                 "employees",
                 {"firstname": "ANDERS"},
@@ -87,7 +95,7 @@ async def main():
             )
             print("New employee:", new_employee, "\n")
 
-            # Delete inside a transaction
+            # Delete
             print("Count before delete: ", await q.count(
                 "SELECT COUNT(*) FROM employees"
             ), "\n")
@@ -103,17 +111,78 @@ async def main():
                 "SELECT COUNT(*) FROM employees"
             ), "\n")
 
-        products_limit_5 = await q.fetch_all(
-            "SELECT productname FROM products LIMIT 5",
-            {},
-            as_mapping=True
-        )
-        print("Products: ", products_limit_5)
+            bulk_insert_list = [
+                {
+                    'lastname': 'MyLastname',
+                    'firstname': 'BulkName1',
+                    'title': 'MyTitle',
+                    'titleofcourtesy': 'Mr.',
+                    'birthdate': datetime.date.fromisoformat("1966-01-27"),
+                    'hiredate': datetime.date.fromisoformat("1993-10-17"),
+                    'address': 'MyPlace 123',
+                    'city': 'My City',
+                    'region': None,
+                    'postalcode': 'RG1 9SP',
+                    'country': 'DK'
+                },
+                {
+                    'lastname': 'MyLastname',
+                    'firstname': 'BulkName2',
+                    'title': 'MyTitle',
+                    'titleofcourtesy': 'Mr.',
+                    'birthdate': datetime.date.fromisoformat("1966-01-27"),
+                    'hiredate': datetime.date.fromisoformat("1993-10-17"),
+                    'address': 'MyPlace 123',
+                    'city': 'My City',
+                    'region': None,
+                    'postalcode': 'RG1 9SP',
+                    'country': 'DK'
+                },
+                {
+                    'lastname': 'MyLastname',
+                    'firstname': 'BulkName3',
+                    'title': None,
+                    'titleofcourtesy': None,
+                    'birthdate': None,
+                    'hiredate': None,
+                    'address': None,
+                    'city': None,
+                    'region': None,
+                    'postalcode': None,
+                    'country': None
+                }
+            ]
 
-        df_employees = await q.dataframe("SELECT * FROM employees")
-        df_orders = await q.dataframe("SELECT * FROM orders")
-        df_orderdetails = await q.dataframe("SELECT * FROM orderdetails")
-        df_customers = await q.dataframe("SELECT * FROM customers")
+            bulk_insert_result = await q.bulk_insert(
+                "employees",
+                bulk_insert_list,
+            )
+
+            employees = await q.fetch_all(
+                "SELECT firstname FROM employees",
+                as_mapping=False
+            )
+            print("All employees:", "\n", employees, "\n")
+
+            bulk_delete_result = await q.bulk_delete(
+                table="employees",
+                rows={"lastname": "MyLastname"},
+                keys=["lastname"],
+                returning="*"
+            )
+
+            print(bulk_delete_result)
+
+            employees = await q.fetch_all(
+                "SELECT firstname FROM employees",
+                as_mapping=False
+            )
+            print("All employees:", "\n", employees, "\n")
+
+            df_employees = await q.dataframe("SELECT * FROM employees")
+            df_orders = await q.dataframe("SELECT * FROM orders")
+            df_orderdetails = await q.dataframe("SELECT * FROM orderdetails")
+            df_customers = await q.dataframe("SELECT * FROM customers")
 
     await close_engine()
 
@@ -169,7 +238,8 @@ async def main():
     async for batch in stream_batches("SELECT * FROM orderdetails", batch_size=1500):
         batch_df = pd.DataFrame(batch)
         print(batch_df.info())
-
+    
+    await close_asyncpg_pool()
 
 if __name__ == "__main__":
     asyncio.run(main())

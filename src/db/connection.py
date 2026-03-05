@@ -66,7 +66,7 @@ async def close_engine():
 
 
 # ---------------------------------------------------------
-# Initialize the asyncpg connection pool
+# Initialize the asyncpg connection pool for streaming functions
 # ---------------------------------------------------------
 async def init_asyncpg_pool(
     min_size: int = 1,
@@ -74,6 +74,7 @@ async def init_asyncpg_pool(
 ):
     global _pool
     if _pool is None:
+        print("[STREAM] Initializing asyncpg connection pool...")
         _pool = await asyncpg.create_pool(
             ASYNC_PG_URL,
             min_size=min_size,
@@ -146,5 +147,6 @@ async def stream_batches(
 async def close_asyncpg_pool():
     global _pool
     if _pool:
+        print("[STREAM] Closing asyncpg connection pool...")
         await _pool.close()
         _pool = None

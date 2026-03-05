@@ -6,7 +6,6 @@ import pandas as pd
 
 
 class QueryRunner:
-
     """
     High-level SQL helper for AsyncSession.
     Provides:
@@ -217,9 +216,9 @@ class QueryRunner:
         value_binds = ", ".join(f":{c}" for c in cols)
 
         sql = f"INSERT INTO {table} ({col_names}) VALUES ({value_binds})"
-
+        stmt = text(sql)
         # session.execute can accept a list of dicts → batched exec
-        result = await self.session.execute(sql, rows)
+        result = await self.session.execute(stmt, rows)
         return result.rowcount or len(rows)
 
     async def bulk_update(self, table: str, rows: list[dict], key: str):
@@ -249,36 +248,42 @@ class QueryRunner:
     async def bulk_delete(
         self,
         table: str,
-        ids: list,
+        rows: list[dict],
         *,
-        key: str = "id",
+        keys: list[str] = None,
         returning: str | None = None,
     ):
         """
-        Bulk delete by primary/unique key list.
-        Generates a single:
-        DELETE FROM table WHERE key IN (:ids_0, :ids_1, ...)
-        If returning="*" returns list of dict rows,
-        if returning="<col>" returns list of scalars,
-        else returns deleted count.
+        Bulk delete symmetrical to bulk_insert:
+        rows = [{key1: val1, key2: val2, ...}, ...]
+
+        keys: list of columns forming the primary/composite key.
+            If None, uses the keys of the first row.
         """
-        if not ids:
+        if not rows:
             return [] if returning else 0
 
-        # Build SQL with IN expansion (Query handles expansion)
-        sql = f"DELETE FROM {table} WHERE {key} IN :ids"
+        # Determine keys (delete conditions)
+        if keys is None:
+            keys = list(rows[0].keys())
 
-        params = {"ids": ids}
+        # WHERE key1 = :key1 AND key2 = :key2 ...
+        where_clause = " AND ".join(f"{k} = :{k}" for k in keys)
+
+        sql = f"DELETE FROM {table} WHERE {where_clause}"
+        stmt = text(sql)
+
+        # Like bulk_insert: executemany with list[dict]
         if returning == "*":
-            # rows as dict-like mappings
-            return await self.fetch_all(sql + " RETURNING *", params, as_mapping=True)
+            return await self.fetch_all(sql + " RETURNING *", rows, as_mapping=True)
+
         elif returning:
-            # list of scalars from the returning column
-            # (e.g., returning="id" => [1,2,3])
-            rows = await self.fetch_all(sql + f" RETURNING {returning}", params, as_mapping=False)
-            return [r[0] for r in rows]
+            out = await self.fetch_all(sql + f" RETURNING {returning}", rows, as_mapping=False)
+            return [r[0] for r in out]
+
         else:
-            return await self.execute(sql, params)
+            result = await self.session.execute(stmt, rows)
+            return result.rowcount or len(rows)
 
     # -----------------------------------------------------
     # Dataframe helper
@@ -297,7 +302,7 @@ class QueryRunner:
     def transaction(self):
         """
         Usage:
-            async with Query(session).transaction():
+            async with QueryRunner(session).transaction():
                 await q.execute(...)
                 await q.execute(...)
         """
@@ -320,15 +325,20 @@ class _AutoCleanupTransaction:
     async def __aenter__(self):
         # If SQLAlchemy opened a transaction implicitly, clean it
         if self.session.in_transaction():
+            print("[DB] Detected active transaction. Rolling back before starting new transaction...")
             await self.session.rollback()
 
         # Now start our explicit transaction
+        print("[DB] Starting new transaction...")
         self._tx = await self.session.begin()
         return self.session
 
     async def __aexit__(self, exc_type, exc, tb):
+        print("[DB] Exiting transaction...")
         if exc_type:
+            print(f"[DB] Exception detected: {exc_type.__name__}: {exc}. Rolling back transaction...")
             await self.session.rollback()
         else:
+            print("[DB] Committing transaction...")
             await self.session.commit()
         return False
