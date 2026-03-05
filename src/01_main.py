@@ -149,12 +149,12 @@ async def main():
 
     plt.show()
 
-    async for row in stream("SELECT * FROM orderdetails"):
+    async for row in stream("SELECT * FROM orderdetails LIMIT 50"):
         print(row)
 
-    async for batch in stream_batches("SELECT * FROM orderdetails", batch_size=100):
-        df = pd.DataFrame(batch)
-        print(df.info())
+    async for batch in stream_batches("SELECT * FROM orderdetails", batch_size=1500):
+        batch_df = pd.DataFrame(batch)
+        print(batch_df.info())
 
 
 if __name__ == "__main__":

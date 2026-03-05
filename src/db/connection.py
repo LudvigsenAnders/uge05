@@ -95,10 +95,15 @@ async def stream(
     """
     pool = await init_asyncpg_pool()
 
+    print("[STREAM] Opening connection...")
+
     async with pool.acquire() as conn:
         async with conn.transaction():
-            async for rec in conn.cursor(sql, *params):
-                yield dict(rec)
+            try:
+                async for rec in conn.cursor(sql, *params):
+                    yield dict(rec)
+            finally:
+                print("[STREAM] Closing connection...")
 
 
 # ---------------------------------------------------------
@@ -115,15 +120,24 @@ async def stream_batches(
     """
     pool = await init_asyncpg_pool()
 
-    async with pool.acquire() as conn:
-        stmt = await conn.prepare(sql)
-        cursor = stmt.cursor(*params)
+    print("[STREAM BATCH] Opening connection...")
 
-        while True:
-            batch = await cursor.fetch(batch_size)
-            if not batch:
-                break
-            yield [dict(r) for r in batch]
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            cursor = conn.cursor(sql, *params)
+            try:
+                batch = []
+                async for rec in cursor:
+                    batch.append(dict(rec))
+
+                    if len(batch) >= batch_size:
+                        yield batch
+                        batch = []
+                # leftover rows
+                if batch:
+                    yield batch
+            finally:
+                print("[STREAM BATCH] Closing connection...")
 
 
 # ---------------------------------------------------------
