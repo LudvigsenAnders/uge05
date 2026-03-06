@@ -205,7 +205,7 @@ class QueryRunner:
     # -----------------------------------------------------
     async def bulk_insert(self, table: str, rows: list[dict]):
         """
-        Very fast bulk insert using one INSERT ... VALUES ... statement.
+        Bulk insert using one INSERT ... VALUES ... statement.
         rows = [ {"col":val,...}, {"col":val,...} ]
         """
         if not rows:
@@ -223,7 +223,7 @@ class QueryRunner:
 
     async def bulk_update(self, table: str, rows: list[dict], key: str):
         """
-        Bulk update using multiple UPDATE statements batched internally.
+        Bulk update.
         rows MUST contain the key column (PK or unique).
         Example row: {"employeeid": 5, "city": "Aarhus"}
         """
@@ -254,7 +254,7 @@ class QueryRunner:
         returning: str | None = None,
     ):
         """
-        Bulk delete symmetrical to bulk_insert:
+        Bulk delete:
         rows = [{key1: val1, key2: val2, ...}, ...]
 
         keys: list of columns forming the primary/composite key.
