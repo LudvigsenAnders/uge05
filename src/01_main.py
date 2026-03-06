@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
-from db.connection import close_asyncpg_pool, get_session, close_engine, stream, stream_batches
+from db.connection import close_asyncpg_pool, get_session, close_engine, stream, stream_batches, inspect_pool
 from db.db_utils import QueryRunner
 
 
@@ -19,6 +19,8 @@ async def main():
                 "SELECT * FROM orderdetails"
             )
             print("One row:", one_row, "\n")
+
+            await inspect_pool(session)
 
             # Get rows
             employees = await q.fetch_all(
@@ -195,6 +197,7 @@ async def main():
             df_customers = await q.dataframe("SELECT * FROM customers")
 
     await close_engine()
+    await inspect_pool(session)
 
     # prepare orderdetails for calculations (convert to numeric, handle missing/invalid)
     df_orderdetails["quantity"] = pd.to_numeric(df_orderdetails["quantity"], errors="coerce").fillna(0).astype(int)

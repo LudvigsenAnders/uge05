@@ -155,12 +155,13 @@ async def close_asyncpg_pool():
 # ---------------------------------------------------------
 # Pool inspection tool
 # ---------------------------------------------------------
-async def inspect_pool(engine):
+async def inspect_pool(session: AsyncSession):
     """
     Print connection pool statistics for a SQLAlchemy async engine.
     Useful for debugging pool exhaustion, connection leaks,
     and async concurrency issues.
     """
+    engine = session.get_bind()
     pool = engine.pool
 
     print("=== Connection Pool Stats ===")
