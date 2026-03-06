@@ -179,6 +179,16 @@ async def main():
             )
             print("All employees:", "\n", employees, "\n")
 
+            # Streaming examples
+            async for row in stream("SELECT * FROM orderdetails LIMIT 10"):
+                print(row)
+
+            async for batch in stream_batches("SELECT * FROM orderdetails", batch_size=1500):
+                batch_df = pd.DataFrame(batch)
+                print(batch_df.info())
+
+            await close_asyncpg_pool()
+
             df_employees = await q.dataframe("SELECT * FROM employees")
             df_orders = await q.dataframe("SELECT * FROM orders")
             df_orderdetails = await q.dataframe("SELECT * FROM orderdetails")
@@ -232,14 +242,7 @@ async def main():
 
     plt.show()
 
-    async for row in stream("SELECT * FROM orderdetails LIMIT 10"):
-        print(row)
-
-    async for batch in stream_batches("SELECT * FROM orderdetails", batch_size=1500):
-        batch_df = pd.DataFrame(batch)
-        print(batch_df.info())
-
-    await close_asyncpg_pool()
+    print("Done!")
 
 if __name__ == "__main__":
     asyncio.run(main())

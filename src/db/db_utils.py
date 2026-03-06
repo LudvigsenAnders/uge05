@@ -328,7 +328,7 @@ class _AutoCleanupTransaction:
             print("[DB] Detected active transaction. Rolling back before starting new transaction...")
             await self.session.rollback()
 
-        # Now start our explicit transaction
+        # Start new explicit transaction
         print("[DB] Starting new transaction...")
         self._tx = await self.session.begin()
         return self.session
