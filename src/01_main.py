@@ -22,6 +22,19 @@ async def main():
 
             await inspect_pool(session)
 
+            query = (
+                "select * from orders where employeeid in (2,5,8) "
+                "and shipregion is not null and shipvia in (1,3) "
+                "order by employeeid ASC, shipvia ASC;"
+            )
+            # Get rows
+            output = await q.fetch_all(
+                query,
+                as_mapping=True
+            )
+            print(f"Output: {output}", "\n")
+            print(f"Number of rows: {len(output)}", "\n")
+
             # Get rows
             employees = await q.fetch_all(
                 "SELECT firstname FROM employees",
