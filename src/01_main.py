@@ -12,13 +12,13 @@ async def main():
         async with q.transaction():
             # Get a single scalar
             now = await q.fetch_value("SELECT NOW()")
-            print("Now:", now)
+            print(f"Now: {now}", "\n")
 
             # Get one row
             one_row = await q.fetch_one(
                 "SELECT * FROM orderdetails"
             )
-            print("One row:", one_row, "\n")
+            print(f"One row: {one_row}", "\n")
 
             await inspect_pool(session)
 
@@ -27,15 +27,14 @@ async def main():
                 "SELECT firstname FROM employees",
                 as_mapping=False
             )
-            print("All employees:", "\n", employees, "\n")
-
+            print(f"All employees: {employees}", "\n")
             # Get rows with IN params
             customers = await q.fetch_all(
                 "SELECT customerid, companyname FROM customers WHERE country IN :countries",
                 {"countries": ["UK", "USA"]},
                 as_mapping=True
             )
-            print("UK and USA customers:", "\n", customers, "\n")
+            print(f"UK and USA customers: {customers}", "\n")
 
             # Product query example
             products_limit_5 = await q.fetch_all(
@@ -43,20 +42,12 @@ async def main():
                 {},
                 as_mapping=True
             )
-            print("Products: ", products_limit_5)
+            print(f"Products: {products_limit_5}")
 
             # Get exists True/False
-            print("Exists: ",
-                  await q.exists(
-                      "SELECT 1 FROM employees WHERE employeeid = :id",
-                      {"id": 10}
-                  ))
+            print(f"Exists: {await q.exists('SELECT 1 FROM employees WHERE employeeid = :id', {'id': 10})}")
             # Get count of rows
-            print("row count: ",
-                  await q.count(
-                      "SELECT COUNT(*) FROM employees WHERE country = :c",
-                      {"c": "UK"}
-                  ))
+            print(f"row count: {await q.count('SELECT COUNT(*) FROM employees WHERE country = :c', {'c': 'UK'})}")
 
             # insert
             new_emp = await q.insert(
@@ -76,13 +67,13 @@ async def main():
                 },
                 returning="employeeid"
             )
-            print("Inserted new employee: ", new_emp, "\n")
+            print(f"Inserted new employee: {new_emp}", "\n")
 
             new_employee = await q.fetch_all(
                 "SELECT * FROM employees WHERE employeeid = (SELECT MAX(employeeid) FROM employees)",
                 as_mapping=True
             )
-            print("New employee:", new_employee, "\n")
+            print(f"New employee: {new_employee}", "\n")
 
             # Update
             await q.update(
@@ -95,12 +86,10 @@ async def main():
                 "SELECT * FROM employees WHERE employeeid = (SELECT MAX(employeeid) FROM employees)",
                 as_mapping=True
             )
-            print("New employee:", new_employee, "\n")
+            print(f"New employee: {new_employee}", "\n")
 
             # Delete
-            print("Count before delete: ", await q.count(
-                "SELECT COUNT(*) FROM employees"
-            ), "\n")
+            print(f"Count before delete: {await q.count('SELECT COUNT(*) FROM employees', {})}", "\n")
 
             await q.delete(
                 "employees",
@@ -109,9 +98,7 @@ async def main():
                 returning="*"
             )
 
-            print("Count after delete: ", await q.count(
-                "SELECT COUNT(*) FROM employees"
-            ), "\n")
+            print(f"Count after delete: {await q.count('SELECT COUNT(*) FROM employees', {})}", "\n")
 
             bulk_insert_list = [
                 {
@@ -164,7 +151,7 @@ async def main():
                 "SELECT firstname FROM employees",
                 as_mapping=False
             )
-            print("All employees:", "\n", employees, "\n")
+            print(f"All employees: {employees}", "\n")
 
             bulk_delete_result = await q.bulk_delete(
                 table="employees",
@@ -173,13 +160,12 @@ async def main():
                 returning="*"
             )
 
-            print(bulk_delete_result)
-
+            print(f"Bulk delete result: {bulk_delete_result}")
             employees = await q.fetch_all(
                 "SELECT firstname FROM employees",
                 as_mapping=False
             )
-            print("All employees:", "\n", employees, "\n")
+            print(f"All employees: {employees}", "\n")
 
             # Streaming examples
             async for row in stream("SELECT * FROM orderdetails LIMIT 10"):

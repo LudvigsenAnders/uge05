@@ -24,14 +24,15 @@ class QueryRunner:
     # -----------------------------------------------------
     # Internal: Detect list/tuple params and enable expanding=True
     # -----------------------------------------------------
-    """
-    Automatically convert list/tuple params into expanding bindparams.
-    Example:
-        WHERE id IN :ids   +   {"ids": [1,2,3]}
-    becomes:
-        WHERE id IN (:ids_0, :ids_1, :ids_2)
-    """
+
     def _prepare_statement(self, sql: str, params: Optional[Dict[str, Any]]):
+        """
+        Automatically convert list/tuple params into expanding bindparams.
+        Example:
+            WHERE id IN :ids   +   {"ids": [1,2,3]}
+        becomes:
+            WHERE id IN (:ids_0, :ids_1, :ids_2)
+        """
         stmt = text(sql)
         if params:
             for key, value in params.items():
