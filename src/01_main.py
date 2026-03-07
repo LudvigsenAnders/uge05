@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
+import pandera.pandas as pa
 from db.connection import close_asyncpg_pool, get_session, close_engine, stream, stream_batches, inspect_pool
 from db.db_utils import QueryRunner
 
@@ -197,6 +198,28 @@ async def main():
 
     await close_engine()
     await inspect_pool(session)
+    print(df_orderdetails.info())
+
+    schema = pa.DataFrameSchema(
+        columns={
+            "orderid": pa.Column(int),
+            "productid": pa.Column(int),
+            "unitprice": pa.Column(float),
+            "quantity": pa.Column(int),
+            "discount": pa.Column(float),
+        },
+        coerce=True,
+        strict=True
+    )
+    # 3. Validate the DataFrame
+    try:
+        validated_df = schema.validate(df_orderdetails)
+        print("DataFrame is valid:")
+        print(validated_df.info())
+    except pa.errors.SchemaError as e:
+        print("Schema validation failed:")
+        print(e)
+    print(df_orderdetails.info())
 
     # prepare orderdetails for calculations (convert to numeric, handle missing/invalid)
     df_orderdetails["quantity"] = pd.to_numeric(df_orderdetails["quantity"], errors="coerce").fillna(0).astype(int)
