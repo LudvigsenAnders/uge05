@@ -1,22 +1,28 @@
 import json
 import datetime
 from sqlalchemy import text
-from .masking import mask_sensitive
-from .errors import AuditLoggingError
+from masking import SecretMasker
+from errors import AuditLoggingError
 
 
 class AuditLogger:
     def __init__(self, audit_engine, audit_file):
+        self.masker = SecretMasker()
         self.audit_engine = audit_engine
         self.audit_file = audit_file
 
-    def log(self, action: str, detail: str = None):
+    def log(self, action, detail=None):
+        # Ensure table exists BEFORE writing logs
+        self.ensure_table()
+
         timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        action_masked = self.masker.mask(action)
+        detail_masked = self.masker.mask(detail)
 
         entry = {
             "timestamp": timestamp,
-            "action": mask_sensitive(action),
-            "detail": mask_sensitive(detail),
+            "action": action_masked,
+            "detail": detail_masked,
         }
 
         # Write to file
@@ -26,7 +32,7 @@ class AuditLogger:
         except Exception as e:
             raise AuditLoggingError(f"File audit failed: {e}")
 
-        # Write to DB (outside provisioning transaction)
+        # Write to DB
         try:
             with self.audit_engine.begin() as conn:
                 conn.execute(
@@ -38,3 +44,18 @@ class AuditLogger:
                 )
         except Exception as e:
             raise AuditLoggingError(f"DB audit failed: {e}")
+
+    def ensure_table(self):
+        try:
+            with self.audit_engine.begin() as conn:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS security_audit (
+                        id BIGSERIAL PRIMARY KEY,
+                        timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        action TEXT NOT NULL,
+                        detail TEXT,
+                        actor TEXT NOT NULL DEFAULT current_user
+                    );
+                """))
+        except Exception as e:
+            raise AuditLoggingError(f"Failed to ensure audit table exists: {e}")

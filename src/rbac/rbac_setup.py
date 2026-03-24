@@ -1,6 +1,6 @@
-from rbac.rbac_config import Config
-from rbac.provisioner import RBACProvisioner
-from rbac.audit import AuditLogger
+from rbac_config import Config
+from provisioner import RBACProvisioner
+from audit import AuditLogger
 from sqlalchemy import create_engine
 
 
@@ -12,6 +12,7 @@ def main():
 
     p = RBACProvisioner(cfg, audit_logger)
     p.provision_all()
+    print("provision finished")
 
 
 if __name__ == "__main__":

@@ -11,11 +11,11 @@ load_dotenv()
 
 class Config:
     def __init__(self):
-        self.schemas = ["public", "billing", "analytics"]
+        self.schemas = ["nw_public", "nw_billing", "nw_analytics"]
 
         self.login_roles = {
-            "user_john": os.getenv("USER_JOHN_PASSWORD", "changeme1"),
-            "user_service": os.getenv("USER_SERVICE_PASSWORD", "changeme2"),
+            "nw_user_john": os.getenv("USER_JOHN_PASSWORD", "changeme1"),
+            "nw_user_service": os.getenv("USER_SERVICE_PASSWORD", "changeme2"),
         }
 
         self.db_admin_url = (
@@ -23,7 +23,7 @@ class Config:
             f"{os.getenv('POSTGRES_PASSWORD', 'postgres')}@"
             f"{os.getenv('POSTGRES_HOST', 'localhost')}:"
             f"{os.getenv('POSTGRES_PORT', '5432')}/"
-            f"{os.getenv('POSTGRES_DB', 'mydb')}"
+            f"{os.getenv('POSTGRES_DB', 'northwind')}"
         )
 
         self.audit_log_file = os.getenv("AUDIT_LOG_FILE", "audit.log")
