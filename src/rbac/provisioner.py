@@ -166,32 +166,6 @@ class RBACProvisioner:
             audit_action="Grant billing_ro to user_john")
 
     # ------------------------------------------------------------
-    # MAIN PROVISIONING ENTRYPOINT
-    # ------------------------------------------------------------
-    def provision_all(self):
-        """
-        Safe provisioning sequence:
-        - create login roles
-        - create schema roles
-        - attach user roles
-        - log commit or rollback
-        """
-        with self.engine.begin() as conn:
-            try:
-                self.secure_database(conn)
-                self.create_login_roles(conn)
-                self.create_schema_roles(conn)
-                self.attach_logins(conn)
-
-                # engine.begin() auto-commits here
-                self.audit.log("COMMIT", "Provisioning completed")
-
-            except Exception as e:
-                # engine.begin() auto-rolls back
-                self.audit.log("ROLLBACK", self.masker.mask(str(e)))
-                raise
-
-    # ------------------------------------------------------------
     # SECURE DATABASE
     # ------------------------------------------------------------
     def secure_database(self, conn):
@@ -217,3 +191,29 @@ class RBACProvisioner:
                 f"GRANT CONNECT ON DATABASE {database} TO {login_role};",
                 f"Grant CONNECT on database {database} to {login_role}"
             )
+
+    # ------------------------------------------------------------
+    # MAIN PROVISIONING ENTRYPOINT
+    # ------------------------------------------------------------
+    def provision_all(self):
+        """
+        Safe provisioning sequence:
+        - create login roles
+        - create schema roles
+        - attach user roles
+        - log commit or rollback
+        """
+        with self.engine.begin() as conn:
+            try:
+                self.secure_database(conn)
+                self.create_login_roles(conn)
+                self.create_schema_roles(conn)
+                self.attach_logins(conn)
+
+                # engine.begin() auto-commits here
+                self.audit.log("COMMIT", "Provisioning completed")
+
+            except Exception as e:
+                # engine.begin() auto-rolls back
+                self.audit.log("ROLLBACK", self.masker.mask(str(e)))
+                raise
