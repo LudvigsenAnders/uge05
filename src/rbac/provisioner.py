@@ -178,6 +178,7 @@ class RBACProvisioner:
         """
         with self.engine.begin() as conn:
             try:
+                self.secure_database(conn)
                 self.create_login_roles(conn)
                 self.create_schema_roles(conn)
                 self.attach_logins(conn)
@@ -189,3 +190,30 @@ class RBACProvisioner:
                 # engine.begin() auto-rolls back
                 self.audit.log("ROLLBACK", self.masker.mask(str(e)))
                 raise
+
+    # ------------------------------------------------------------
+    # SECURE DATABASE
+    # ------------------------------------------------------------
+    def secure_database(self, conn):
+        """
+        Secure the database by:
+        - Revoking PUBLIC access
+        - Granting explicit CONNECT to only approved login roles
+        """
+
+        database = self.config.database_name  # your DB name from config
+
+        # 1. Remove unsafe default access
+        self.run(
+            conn,
+            f"REVOKE ALL ON DATABASE {database} FROM PUBLIC;",
+            f"Revoke PUBLIC privileges on database {database}"
+        )
+
+        # 2. Grant CONNECT only to approved login roles
+        for login_role in self.config.login_roles.keys():
+            self.run(
+                conn,
+                f"GRANT CONNECT ON DATABASE {database} TO {login_role};",
+                f"Grant CONNECT on database {database} to {login_role}"
+            )

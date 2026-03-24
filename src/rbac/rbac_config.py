@@ -18,12 +18,14 @@ class Config:
             "nw_user_service": os.getenv("USER_SERVICE_PASSWORD", "changeme2"),
         }
 
+        self.database_name = os.getenv("POSTGRES_DB", "mydb")
+
         self.db_admin_url = (
             f"postgresql+psycopg2://{os.getenv('POSTGRES_USER', 'postgres')}:"
             f"{os.getenv('POSTGRES_PASSWORD', 'postgres')}@"
             f"{os.getenv('POSTGRES_HOST', 'localhost')}:"
             f"{os.getenv('POSTGRES_PORT', '5432')}/"
-            f"{os.getenv('POSTGRES_DB', 'northwind')}"
+            f"{self.database_name}"
         )
 
         self.audit_log_file = os.getenv("AUDIT_LOG_FILE", "audit.log")
