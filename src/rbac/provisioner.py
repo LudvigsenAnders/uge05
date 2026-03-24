@@ -70,28 +70,6 @@ class RBACProvisioner:
             raise SQLExecutionError(masked)
 
     # ------------------------------------------------------------
-    # AUDIT TABLE INITIALIZATION
-    # ------------------------------------------------------------
-    # def create_audit_table(self, conn):
-    #     """
-    #     Must be run BEFORE any rollback logging.
-    #     """
-    #     self.run(
-    #         conn,
-    #         """
-    #         CREATE TABLE IF NOT EXISTS security_audit (
-    #             id BIGSERIAL PRIMARY KEY,
-    #             timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    #             action TEXT NOT NULL,
-    #             detail TEXT,
-    #             actor TEXT NOT NULL DEFAULT current_user
-    #         );
-    #         """,
-    #         "Create audit table",
-    #         "Ensure security_audit exists"
-    #     )
-
-    # ------------------------------------------------------------
     # REVOKE OPERATIONS (SAFE + IDEMPOTENT)
     # ------------------------------------------------------------
     def revoke_public_on_schema(self, conn, schema):
