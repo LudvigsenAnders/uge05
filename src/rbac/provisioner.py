@@ -174,14 +174,9 @@ class RBACProvisioner:
     # ------------------------------------------------------------
     def attach_logins(self, conn):
 
-      
-
         for login_name, cfg in self.rbac_cfg.login_roles.items():
-
             granted_roles = cfg["granted_roles"]
             for g_role in granted_roles:
-
-                print(login_name, "=>", g_role)
                 self.run(
                     conn,
                     sql=f"GRANT {g_role} TO {login_name};",
@@ -193,11 +188,6 @@ class RBACProvisioner:
         #     conn,
         #     sql="GRANT public_rw TO user_john;",
         #     audit_action="Grant public_rw to user_john")
-
-        # self.run(
-        #     conn,
-        #     sql="GRANT billing_ro TO user_john;",
-        #     audit_action="Grant billing_ro to user_john")
 
         # # database level
         # sql_revoke_db_lvl="REVOKE ALL ON DATABASE mydb FROM PUBLIC;"

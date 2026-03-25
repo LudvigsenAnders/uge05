@@ -4,6 +4,6 @@
 
   "database_privileges": {
     "public_revoked": true,
-    "grant_connect_to": ["user_john", "user_svc", "billing_job"]
+    "grant_connect_to": ["user_analyst", "user_audit", "user_billing", "user_service_admin"]
   }
 }
