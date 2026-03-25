@@ -1,0 +1,41 @@
+
+{
+  "schema": "analytics",
+
+  "admin_role": "analytics_admin",
+  "rw_role": "analytics_rw",
+  "ro_role": "analytics_ro",
+
+  "grants": {
+    "admin": {
+      "schema": ["USAGE", "CREATE"],
+      "tables": ["ALL PRIVILEGES"],
+      "sequences": ["ALL PRIVILEGES"]
+    },
+    "rw": {
+      "schema": ["USAGE"],
+      "tables": ["SELECT", "INSERT", "UPDATE", "DELETE"],
+      "sequences": ["SELECT", "UPDATE"]
+    },
+    "ro": {
+      "schema": ["USAGE"],
+      "tables": ["SELECT"],
+      "sequences": ["SELECT"]
+    }
+  },
+
+  "default_privileges": {
+    "admin": {
+      "tables": ["ALL PRIVILEGES"],
+      "sequences": ["ALL PRIVILEGES"]
+    },
+    "rw": {
+      "tables": ["SELECT", "INSERT", "UPDATE", "DELETE"],
+      "sequences": ["SELECT", "UPDATE"]
+    },
+    "ro": {
+      "tables": ["SELECT"],
+      "sequences": ["SELECT"]
+    }
+  }
+}

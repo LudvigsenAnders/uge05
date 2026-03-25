@@ -1,0 +1,41 @@
+
+{
+  "schema": "public",
+
+  "admin_role": "public_admin",
+  "rw_role": "public_rw",
+  "ro_role": "public_ro",
+
+  "grants": {
+    "admin": {
+      "schema": ["USAGE", "CREATE"],
+      "tables": ["ALL PRIVILEGES"],
+      "sequences": ["ALL PRIVILEGES"]
+    },
+    "rw": {
+      "schema": ["USAGE"],
+      "tables": ["SELECT", "INSERT", "UPDATE", "DELETE"],
+      "sequences": ["SELECT", "UPDATE"]
+    },
+    "ro": {
+      "schema": ["USAGE"],
+      "tables": ["SELECT"],
+      "sequences": ["SELECT"]
+    }
+  },
+
+  "default_privileges": {
+    "admin": {
+      "tables": ["ALL PRIVILEGES"],
+      "sequences": ["ALL PRIVILEGES"]
+    },
+    "rw": {
+      "tables": ["SELECT", "INSERT", "UPDATE", "DELETE"],
+      "sequences": ["SELECT", "UPDATE"]
+    },
+    "ro": {
+      "tables": ["SELECT"],
+      "sequences": ["SELECT"]
+    }
+  }
+}

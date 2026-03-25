@@ -1,0 +1,8 @@
+
+{
+  "metadata": {
+    "version": 1,
+    "author": "Northwind Foods Company",
+    "description": "RBAC configuration for PostgreSQL roles, privileges and schemas"
+  }
+}

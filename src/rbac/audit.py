@@ -1,14 +1,14 @@
 import json
 import datetime
-from sqlalchemy import text
+from sqlalchemy import text, create_engine
 from masking import SecretMasker
 from errors import AuditLoggingError
 
 
 class AuditLogger:
-    def __init__(self, audit_engine, audit_file):
+    def __init__(self, env_cfg, audit_file):
         self.masker = SecretMasker()
-        self.audit_engine = audit_engine
+        self.audit_engine = create_engine(env_cfg.db_admin_url, future=True)
         self.audit_file = audit_file
 
     def log(self, action, detail=None):

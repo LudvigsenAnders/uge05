@@ -1,4 +1,4 @@
-from rbac.rbac_config import Config
+from src.rbac.rbac_env_config import EnvConfig
 
 
 def test_env_overrides(monkeypatch):
@@ -7,7 +7,7 @@ def test_env_overrides(monkeypatch):
     monkeypatch.setenv("POSTGRES_HOST", "h1")
     monkeypatch.setenv("POSTGRES_DB", "d1")
 
-    cfg = Config()
+    cfg = EnvConfig()
     assert "u1" in cfg.db_admin_url
     assert "p1" in cfg.db_admin_url
     assert "h1" in cfg.db_admin_url

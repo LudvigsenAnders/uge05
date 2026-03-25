@@ -1,7 +1,7 @@
 import pytest
 from rbac.audit import AuditLogger
 from rbac.provisioner import RBACProvisioner
-from rbac.rbac_config import Config
+from src.rbac.rbac_env_config import EnvConfig
 from sqlalchemy.sql import text
 
 
@@ -80,7 +80,7 @@ def audit_logger(audit_engine, tmp_path):
 
 @pytest.fixture
 def config():
-    return Config()
+    return EnvConfig()
 
 
 @pytest.fixture

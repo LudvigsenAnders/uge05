@@ -143,6 +143,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.env.users
 
 # Spyder project settings
 .spyderproject

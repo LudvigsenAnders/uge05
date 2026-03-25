@@ -4,13 +4,14 @@ from masking import SecretMasker
 
 
 class RBACProvisioner:
-    def __init__(self, config, audit_logger):
-        self.config = config
+    def __init__(self, env_cfg, rbac_cfg, audit_logger):
+        self.env_cfg = env_cfg
+        self.rbac_cfg = rbac_cfg
         self.audit = audit_logger
-        self.strict_mode = config.strict_mode
+        self.strict_mode = env_cfg.strict_mode
 
         # Real DB engine (for provisioning)
-        self.engine = create_engine(config.db_admin_url, echo=config.echo, future=True)
+        self.engine = create_engine(env_cfg.db_admin_url, echo=env_cfg.echo, future=True)
 
         # secret masking
         self.masker = SecretMasker()
@@ -24,12 +25,12 @@ class RBACProvisioner:
         - Duplicate errors (already exists / does not exist) → SKIPPED
         - Real errors → logged + raise SQLExecutionError
         """
-        sp = conn.begin_nested()  # SAVEPOINT
+        sp = conn.begin_nested()
 
         try:
             conn.execute(text(sql), params)
             self.audit.log(audit_action, audit_detail or sql)
-            sp.commit()  # savepoint succeeded
+            sp.commit()
 
         except Exception as e:
             msg = str(e).lower()
@@ -58,7 +59,7 @@ class RBACProvisioner:
             )
 
             if any(err in msg for err in idempotent_errors):
-                sp.rollback()  # rollback only the SAVEPOINT
+                sp.rollback()
                 masked = self.masker.mask(str(e))
                 self.audit.log(f"SKIPPED: {audit_action}", masked)
                 return
@@ -104,7 +105,12 @@ class RBACProvisioner:
     # CREATE LOGIN ROLES
     # ------------------------------------------------------------
     def create_login_roles(self, conn):
-        for user, pw in self.config.login_roles.items():
+
+        for user, cfg in self.rbac_cfg.login_roles.items():
+
+            # Load password from ENV using the loader
+            pw = self.rbac_cfg.get_login_password(user)
+
             self.run(
                 conn,
                 sql=f"CREATE ROLE {user} LOGIN PASSWORD :pw;",
@@ -114,10 +120,25 @@ class RBACProvisioner:
             )
 
     # ------------------------------------------------------------
+    # REVOKE ALL (SAFE + IDEMPOTENT)
+    # ------------------------------------------------------------
+    def revoke_all(self, conn) -> None:
+        self.revoke_public_on_database(conn, self.rbac_cfg.database)
+
+        for s in self.rbac_cfg.schemas:
+            # secure schema FIRST
+            self.revoke_public_on_schema(conn, s)
+            self.revoke_public_on_tables(conn, s)
+            self.revoke_public_on_sequences(conn, s)
+
+    # ------------------------------------------------------------
     # CREATE SCHEMA + ROLE BUNDLES
     # ------------------------------------------------------------
     def create_schema_roles(self, conn):
-        for s in self.config.schemas:
+
+        self.revoke_public_on_database(conn, self.rbac_cfg.database)
+
+        for s in self.rbac_cfg.schemas:
 
             # secure schema FIRST
             self.revoke_public_on_schema(conn, s)
@@ -140,7 +161,7 @@ class RBACProvisioner:
                     audit_detail=f"Role: {role}"
                 )
 
-            # --- GRANTS (you can add your full grant logic here) ---
+            # --- GRANTS (add the full grant logic here) ---
             # For example:
             #
             # self.run(conn,
@@ -148,48 +169,72 @@ class RBACProvisioner:
             #     f"Grant RW usage on {s}"
             # )
 
-            # Extend with your actual GRANT logic as needed.
-
     # ------------------------------------------------------------
     # ATTACH LOGIN USERS TO ROLES
     # ------------------------------------------------------------
     def attach_logins(self, conn):
-        # Example mappings
-        self.run(
-            conn,
-            sql="GRANT public_rw TO user_john;",
-            audit_action="Grant public_rw to user_john")
 
-        self.run(
-            conn,
-            sql="GRANT billing_ro TO user_john;",
-            audit_action="Grant billing_ro to user_john")
+      
+
+        for login_name, cfg in self.rbac_cfg.login_roles.items():
+
+            granted_roles = cfg["granted_roles"]
+            for g_role in granted_roles:
+
+                print(login_name, "=>", g_role)
+                self.run(
+                    conn,
+                    sql=f"GRANT {g_role} TO {login_name};",
+                    audit_action=f"Grant {g_role} to {login_name}"
+                )
+
+        # # Example mappings
+        # self.run(
+        #     conn,
+        #     sql="GRANT public_rw TO user_john;",
+        #     audit_action="Grant public_rw to user_john")
+
+        # self.run(
+        #     conn,
+        #     sql="GRANT billing_ro TO user_john;",
+        #     audit_action="Grant billing_ro to user_john")
+
+        # # database level
+        # sql_revoke_db_lvl="REVOKE ALL ON DATABASE mydb FROM PUBLIC;"
+        # sql_grant_db_lvl="GRANT CONNECT ON DATABASE mydb TO <allowed users>;"
+        # # schema level
+        # sql_revoke_schema_lvl="REVOKE ALL ON SCHEMA billing FROM PUBLIC;"
+        # sql_grant_schema_lvl="GRANT USAGE ON SCHEMA billing TO billing_rw, billing_ro;"
+        # # table level
+        # sql_grant_table_lvl="GRANT SELECT ON ALL TABLES IN SCHEMA billing TO billing_ro;"
+        # # alter default privileges
+        # sql_alter="ALTER DEFAULT PRIVILEGES"
 
     # ------------------------------------------------------------
     # SECURE DATABASE
     # ------------------------------------------------------------
-    def secure_database(self, conn):
+    def grant_connection_to_database(self, conn):
         """
         Secure the database by:
         - Revoking PUBLIC access
         - Granting explicit CONNECT to only approved login roles
         """
 
-        database = self.config.database_name  # your DB name from config
+        database = self.env_cfg.database_name  # your DB name from config
 
         # 1. Remove unsafe default access
         self.run(
             conn,
-            f"REVOKE ALL ON DATABASE {database} FROM PUBLIC;",
-            f"Revoke PUBLIC privileges on database {database}"
+            sql=f"REVOKE ALL ON DATABASE {database} FROM PUBLIC;",
+            audit_action=f"Revoke PUBLIC privileges on database {database}"
         )
 
         # 2. Grant CONNECT only to approved login roles
-        for login_role in self.config.login_roles.keys():
+        for login_role in self.rbac_cfg.login_roles.keys():
             self.run(
                 conn,
-                f"GRANT CONNECT ON DATABASE {database} TO {login_role};",
-                f"Grant CONNECT on database {database} to {login_role}"
+                sql=f"GRANT CONNECT ON DATABASE {database} TO {login_role};",
+                audit_action=f"Grant CONNECT on database {database} to {login_role}"
             )
 
     # ------------------------------------------------------------
@@ -205,8 +250,9 @@ class RBACProvisioner:
         """
         with self.engine.begin() as conn:
             try:
-                self.secure_database(conn)
+                self.revoke_all(conn)
                 self.create_login_roles(conn)
+                self.grant_connection_to_database(conn)
                 self.create_schema_roles(conn)
                 self.attach_logins(conn)
 

@@ -1,0 +1,41 @@
+
+{
+  "schema": "billing",
+
+  "admin_role": "billing_admin",
+  "rw_role": "billing_rw",
+  "ro_role": "billing_ro",
+
+  "grants": {
+    "admin": {
+      "schema": ["USAGE", "CREATE"],
+      "tables": ["ALL PRIVILEGES"],
+      "sequences": ["ALL PRIVILEGES"]
+    },
+    "rw": {
+      "schema": ["USAGE"],
+      "tables": ["SELECT", "INSERT", "UPDATE", "DELETE"],
+      "sequences": ["SELECT", "UPDATE"]
+    },
+    "ro": {
+      "schema": ["USAGE"],
+      "tables": ["SELECT"],
+      "sequences": ["SELECT"]
+    }
+  },
+
+  "default_privileges": {
+    "admin": {
+      "tables": ["ALL ALL PRIVILEGES"],
+      "sequences": ["ALL PRIVILEGES"]
+    },
+    "rw": {
+      "tables": ["SELECT", "INSERT", "UPDATE", "DELETE"],
+      "sequences": ["SELECT", "UPDATE"]
+    },
+    "ro": {
+      "tables": ["SELECT"],
+      "sequences": ["SELECT"]
+    }
+  }
+}

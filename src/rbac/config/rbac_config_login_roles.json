@@ -1,0 +1,17 @@
+
+{
+  "login_roles": {
+    "user_john": {
+      "password_env": "USER_JOHN_PASSWORD",
+      "granted_roles": ["public_rw", "billing_ro"]
+    },
+    "user_svc": {
+      "password_env": "USER_SERVICE_PASSWORD",
+      "granted_roles": ["analytics_ro"]
+    },
+    "billing_job": {
+      "password_env": "BILLING_JOB_PASSWORD",
+      "granted_roles": ["billing_admin"]
+    }
+  }
+}

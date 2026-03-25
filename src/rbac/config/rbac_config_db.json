@@ -1,0 +1,9 @@
+
+{
+  "database": "northwind",
+
+  "database_privileges": {
+    "public_revoked": true,
+    "grant_connect_to": ["user_john", "user_svc", "billing_job"]
+  }
+}
