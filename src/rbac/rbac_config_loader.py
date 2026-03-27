@@ -39,8 +39,12 @@ class RBACConfig:
         # Load all schema files into one dict
         self.schemas = self._load_all_schemas()
 
+        # Extract RBAC config from schema files
+        self.schema_rbac = self._extract_schema_rbac()
+        
         # Validate structure
         self._validate()
+
 
     # ------------------------------------------------------------
     # File loaders
@@ -80,6 +84,41 @@ class RBACConfig:
             raise RBACConfigError("No schema JSON files found in schemas/ directory")
 
         return schemas
+
+
+    def _extract_schema_rbac(self):
+        """
+        Build RBAC settings per schema from raw schema JSON files.
+        Produces a structure like:
+        
+        self.schema_rbac = {
+            "public": {
+                "schema": "public",
+                "admin_role": "public_admin",
+                "rw_role": "public_rw",
+                "ro_role": "public_ro",
+                "grants": {...},
+                "default_privileges": {...}
+            },
+            ...
+        }
+        """
+        schema_rbac = {}
+
+        for schema_name, cfg in self.schemas.items():
+            schema_rbac[schema_name] = {
+                "schema": cfg.get("schema", schema_name),
+
+                "admin_role": cfg.get("admin_role"),
+                "rw_role": cfg.get("rw_role"),
+                "ro_role": cfg.get("ro_role"),
+
+                "grants": cfg.get("grants", {}),
+                "default_privileges": cfg.get("default_privileges", {})
+            }
+
+        return schema_rbac
+
 
     # ------------------------------------------------------------
     # Validation logic

@@ -3,19 +3,19 @@
   "login_roles": {
     "user_analyst": {
       "password_env": "USER_ANALYST_PASSWORD",
-      "granted_roles": ["nw_analytics_rw", "nw_billing_ro"]
+      "granted_roles": ["analytics_rw", "billing_ro"]
     },
     "user_audit": {
       "password_env": "USER_AUDIT_PASSWORD",
-      "granted_roles": ["nw_analytics_ro"]
+      "granted_roles": ["analytics_ro"]
     },
     "user_billing": {
       "password_env": "USER_BILLING_PASSWORD",
-      "granted_roles": ["nw_billing_rw"]
+      "granted_roles": ["billing_rw"]
     },
     "user_service_admin": {
       "password_env": "USER_SERVICE_ADMIN_PASSWORD",
-      "granted_roles": ["nw_analytics_admin","nw_public_admin","nw_billing_admin"]
+      "granted_roles": ["analytics_admin","public_admin","billing_admin"]
     }
     
   }

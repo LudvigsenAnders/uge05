@@ -1,8 +1,10 @@
 from typing import Any, Dict, Optional, List, Tuple, Union
+from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.engine import Result
 from sqlalchemy import text, bindparam
 import pandas as pd
+import re
 
 
 class QueryRunner:
@@ -89,9 +91,79 @@ class QueryRunner:
         return result.rowcount or 0
 
     # -----------------------------------------------------
-    # ADVANCED HELPERS
+    # Read a .sql file from disk
+    # -----------------------------------------------------
+    @staticmethod
+    def load_sql_file(path: str) -> str:
+        """
+        Load and return the contents of a .sql file.
+
+        Example:
+            sql = QueryRunner.load_sql_file("queries/get_users.sql")
+
+        Raises FileNotFoundError if the file doesn't exist.
+        """
+        file_path = Path(path)
+
+        if not file_path.exists():
+            raise FileNotFoundError(f"SQL file not found: {path}")
+
+        #  read_text() uses with open() under the hood
+        return file_path.read_text(encoding="utf-8")
+
+    # -----------------------------------------------------
+    # Execute a .sql file
     # -----------------------------------------------------
 
+    async def execute_sql_file(self, path: str, params=None):
+        sql = self.load_sql_file(path)
+        params = params or {}
+
+        statements = self.split_sql_safe(sql)
+
+        last = None
+        for stmt in statements:
+            if stmt.lower().startswith("select"):
+                last = await self.fetch_all(stmt, params)
+            else:
+                last = await self.execute(stmt, params)
+
+        return last
+
+    @staticmethod
+    def split_sql_safe(sql: str):
+        """
+        Split SQL into executable statements while preserving $$ function blocks.
+        Returns a list of SQL statements.
+        """
+        statements = []
+        buffer = []
+        in_dollar_block = False
+
+        # Regex to detect $something$ delimiters (PL/pgSQL dollar-quoting)
+        dollar_re = re.compile(r"\$[^$]*\$")
+
+        for line in sql.splitlines():
+            # Toggle state if encountering a dollar-quote
+            if dollar_re.search(line):
+                in_dollar_block = not in_dollar_block
+
+            buffer.append(line)
+
+            # Only split at semicolon when NOT inside a $$...$$ block
+            if not in_dollar_block and line.strip().endswith(";"):
+                statements.append("\n".join(buffer).strip())
+                buffer = []
+
+        # Anything left in buffer:
+        if buffer:
+            statements.append("\n".join(buffer).strip())
+
+        return statements
+
+    # -----------------------------------------------------
+    # ADVANCED HELPERS
+    # -----------------------------------------------------
     async def scalar_one(self, sql: str, params: Dict[str, Any] = None) -> Any:
         """
         Return exactly one scalar value.

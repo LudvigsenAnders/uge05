@@ -24,6 +24,20 @@ def main():
     provisioner.provision_all()
     print("provision finished")
 
+    # provisioner.drop_role("public_ro", "pg_database_owner")
+    # provisioner.drop_role("public_rw", "pg_database_owner")
+    # provisioner.drop_role("public_admin", "pg_database_owner")
+    # provisioner.drop_role("analytics_ro", "pg_database_owner")
+    # provisioner.drop_role("analytics_rw", "pg_database_owner")
+    # provisioner.drop_role("analytics_admin", "pg_database_owner")
+    # provisioner.drop_role("billing_ro", "pg_database_owner")
+    # provisioner.drop_role("billing_rw", "pg_database_owner")
+    # provisioner.drop_role("billing_admin", "pg_database_owner")
+    # provisioner.drop_login_role("user_analyst", "postgres")
+    # provisioner.drop_login_role("user_audit", "postgres")
+    # provisioner.drop_login_role("user_billing", "postgres")
+    # provisioner.drop_login_role("user_service_admin", "postgres")
+
 
 if __name__ == "__main__":
     main()
