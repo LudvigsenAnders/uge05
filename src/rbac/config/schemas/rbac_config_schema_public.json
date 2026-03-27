@@ -9,8 +9,8 @@
   "grants": {
     "admin": {
       "schema": ["USAGE", "CREATE"],
-      "tables": ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"],
-      "sequences": ["SELECT", "UPDATE", "USAGE"]
+      "tables": ["ALL PRIVILEGES"],
+      "sequences": ["ALL PRIVILEGES"]
     },
     "rw": {
       "schema": ["USAGE"],
@@ -26,8 +26,8 @@
 
   "default_privileges": {
     "admin": {
-      "tables": ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"],
-      "sequences": ["SELECT", "UPDATE", "USAGE"]
+      "tables": ["ALL PRIVILEGES"],
+      "sequences": ["ALL PRIVILEGES"]
     },
     "rw": {
       "tables": ["SELECT", "INSERT", "UPDATE", "DELETE"],
